@@ -6,7 +6,7 @@ authors = ["Raskell <hello@raskell.io>"]
 description = "API deprecation management agent for Sentinel proxy - sunset headers, usage tracking, and migration support"
 license = "Apache-2.0"
 repository = "https://github.com/raskell-io/sentinel-agent-api-deprecation"
-keywords = ["sentinel", "proxy", "agent", "api", "deprecation", "sunset"]
+keywords = ["sentinel", "proxy", "agent", "api", "deprecation"]
 categories = ["network-programming", "web-programming"]
 readme = "README.md"
 
