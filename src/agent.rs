@@ -9,12 +9,11 @@ use crate::metrics::DeprecationMetrics;
 use async_trait::async_trait;
 use chrono::Utc;
 use sentinel_agent_sdk::{Agent, Decision, Request, Response};
-use sentinel_agent_sdk::v2::{
-    AgentCapabilities, AgentCapabilitiesExt, AgentV2, DrainReason, HealthStatus,
-    MetricsReport, ShutdownReason,
+use sentinel_agent_protocol::v2::{
+    AgentCapabilities, AgentFeatures, AgentHandlerV2, CounterMetric, DrainReason, GaugeMetric,
+    HealthStatus, MetricsReport, ShutdownReason,
 };
-// Import metric types directly from protocol crate
-use sentinel_agent_protocol::v2::GaugeMetric;
+use sentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent, ResponseHeadersEvent};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -383,22 +382,27 @@ impl Agent for ApiDeprecationAgent {
 ///
 /// Provides capability negotiation, health reporting, metrics export,
 /// and lifecycle management.
-impl AgentV2 for ApiDeprecationAgent {
+#[async_trait]
+impl AgentHandlerV2 for ApiDeprecationAgent {
     fn capabilities(&self) -> AgentCapabilities {
         AgentCapabilities::new(
             "api-deprecation",
             "API Deprecation Agent",
             env!("CARGO_PKG_VERSION"),
         )
-        .with_streaming_body(false)
-        .with_config_push(true)
-        .with_health_reporting(true)
-        .with_metrics_export(true)
-        .with_concurrent_requests(100)
-        .with_cancellation(false)
-        .with_flow_control(false)
-        .with_max_processing_time_ms(1000)
-        .with_health_interval_ms(10000)
+        .with_event(EventType::RequestHeaders)
+        .with_event(EventType::ResponseHeaders)
+        .with_features(AgentFeatures {
+            streaming_body: false,
+            config_push: true,
+            health_reporting: true,
+            metrics_export: true,
+            concurrent_requests: 100,
+            cancellation: false,
+            flow_control: false,
+            max_processing_time_ms: 1000,
+            health_interval_ms: 10000,
+        })
     }
 
     fn health_status(&self) -> HealthStatus {
@@ -447,7 +451,7 @@ impl AgentV2 for ApiDeprecationAgent {
         }
     }
 
-    fn on_shutdown(&self, reason: ShutdownReason, grace_period_ms: u64) {
+    async fn on_shutdown(&self, reason: ShutdownReason, grace_period_ms: u64) {
         info!(
             ?reason,
             grace_period_ms,
@@ -456,7 +460,7 @@ impl AgentV2 for ApiDeprecationAgent {
         self.draining.store(true, Ordering::Relaxed);
     }
 
-    fn on_drain(&self, duration_ms: u64, reason: DrainReason) {
+    async fn on_drain(&self, duration_ms: u64, reason: DrainReason) {
         info!(
             ?reason,
             duration_ms,
