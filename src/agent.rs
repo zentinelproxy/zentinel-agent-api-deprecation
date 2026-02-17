@@ -8,12 +8,12 @@ use crate::headers::{gone_response_body, DeprecationHeaders};
 use crate::metrics::DeprecationMetrics;
 use async_trait::async_trait;
 use chrono::Utc;
-use sentinel_agent_sdk::{Agent, Decision, Request, Response};
-use sentinel_agent_protocol::v2::{
+use zentinel_agent_sdk::{Agent, Decision, Request, Response};
+use zentinel_agent_protocol::v2::{
     AgentCapabilities, AgentFeatures, AgentHandlerV2, CounterMetric, DrainReason, GaugeMetric,
     HealthStatus, MetricsReport, ShutdownReason,
 };
-use sentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent, ResponseHeadersEvent};
+use zentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent, ResponseHeadersEvent};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

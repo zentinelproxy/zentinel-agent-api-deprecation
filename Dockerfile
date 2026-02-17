@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-# Sentinel API Deprecation Agent Container Image
+# Zentinel API Deprecation Agent Container Image
 #
 # Targets:
 #   - prebuilt: For CI with pre-built binaries
@@ -10,16 +10,16 @@
 ################################################################################
 FROM gcr.io/distroless/cc-debian12:nonroot AS prebuilt
 
-COPY sentinel-agent-api-deprecation /sentinel-agent-api-deprecation
+COPY zentinel-agent-api-deprecation /zentinel-agent-api-deprecation
 
-LABEL org.opencontainers.image.title="Sentinel API Deprecation Agent" \
-      org.opencontainers.image.description="Sentinel API Deprecation Agent for Sentinel reverse proxy" \
+LABEL org.opencontainers.image.title="Zentinel API Deprecation Agent" \
+      org.opencontainers.image.description="Zentinel API Deprecation Agent for Zentinel reverse proxy" \
       org.opencontainers.image.vendor="Raskell" \
-      org.opencontainers.image.source="https://github.com/raskell-io/sentinel-agent-api-deprecation"
+      org.opencontainers.image.source="https://github.com/zentinelproxy/zentinel-agent-api-deprecation"
 
-ENV RUST_LOG=info,sentinel_agent_api_deprecation=debug \
-    SOCKET_PATH=/var/run/sentinel/api-deprecation.sock
+ENV RUST_LOG=info,zentinel_agent_api_deprecation=debug \
+    SOCKET_PATH=/var/run/zentinel/api-deprecation.sock
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/sentinel-agent-api-deprecation"]
+ENTRYPOINT ["/zentinel-agent-api-deprecation"]

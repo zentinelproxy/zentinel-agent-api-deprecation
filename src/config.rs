@@ -394,7 +394,7 @@ impl Default for MetricsConfig {
 }
 
 fn default_metrics_prefix() -> String {
-    "sentinel_api_deprecation".to_string()
+    "zentinel_api_deprecation".to_string()
 }
 
 #[cfg(test)]

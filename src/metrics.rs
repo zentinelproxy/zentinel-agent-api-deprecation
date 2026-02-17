@@ -163,7 +163,7 @@ impl DeprecationMetrics {
 
 impl Default for DeprecationMetrics {
     fn default() -> Self {
-        Self::new("sentinel_api_deprecation")
+        Self::new("zentinel_api_deprecation")
     }
 }
 

@@ -1,6 +1,6 @@
-# Sentinel API Deprecation Agent
+# Zentinel API Deprecation Agent
 
-An API lifecycle management agent for [Sentinel](https://sentinel.raskell.io) that helps you gracefully deprecate and sunset API endpoints.
+An API lifecycle management agent for [Zentinel](https://zentinelproxy.io) that helps you gracefully deprecate and sunset API endpoints.
 
 ## Features
 
@@ -16,14 +16,14 @@ An API lifecycle management agent for [Sentinel](https://sentinel.raskell.io) th
 ### Using Cargo
 
 ```bash
-cargo install sentinel-agent-api-deprecation
+cargo install zentinel-agent-api-deprecation
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/raskell-io/sentinel-agent-api-deprecation
-cd sentinel-agent-api-deprecation
+git clone https://github.com/zentinelproxy/zentinel-agent-api-deprecation
+cd zentinel-agent-api-deprecation
 cargo build --release
 ```
 
@@ -45,18 +45,18 @@ endpoints:
       type: warn
 ```
 
-2. Add to your Sentinel configuration:
+2. Add to your Zentinel configuration:
 
 ```kdl
 agents {
-    api-deprecation socket="/tmp/sentinel-api-deprecation.sock"
+    api-deprecation socket="/tmp/zentinel-api-deprecation.sock"
 }
 ```
 
 3. Start the agent:
 
 ```bash
-sentinel-agent-api-deprecation -c api-deprecation.yaml
+zentinel-agent-api-deprecation -c api-deprecation.yaml
 ```
 
 ## Configuration
@@ -149,26 +149,26 @@ The agent exposes Prometheus metrics for monitoring:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `sentinel_api_deprecation_requests_total` | counter | Total requests to deprecated endpoints |
-| `sentinel_api_deprecation_redirects_total` | counter | Total redirects performed |
-| `sentinel_api_deprecation_blocked_total` | counter | Total blocked requests |
-| `sentinel_api_deprecation_days_until_sunset` | gauge | Days until endpoint sunset |
-| `sentinel_api_deprecation_request_duration_seconds` | histogram | Request duration |
+| `zentinel_api_deprecation_requests_total` | counter | Total requests to deprecated endpoints |
+| `zentinel_api_deprecation_redirects_total` | counter | Total redirects performed |
+| `zentinel_api_deprecation_blocked_total` | counter | Total blocked requests |
+| `zentinel_api_deprecation_days_until_sunset` | gauge | Days until endpoint sunset |
+| `zentinel_api_deprecation_request_duration_seconds` | histogram | Request duration |
 
 Enable metrics server:
 
 ```bash
-sentinel-agent-api-deprecation --metrics --metrics-port 9090
+zentinel-agent-api-deprecation --metrics --metrics-port 9090
 ```
 
 ## CLI Options
 
 ```
-sentinel-agent-api-deprecation [OPTIONS]
+zentinel-agent-api-deprecation [OPTIONS]
 
 Options:
   -c, --config <PATH>        Configuration file [default: api-deprecation.yaml]
-  -s, --socket <PATH>        Unix socket path [default: /tmp/sentinel-api-deprecation.sock]
+  -s, --socket <PATH>        Unix socket path [default: /tmp/zentinel-api-deprecation.sock]
   -L, --log-level <LEVEL>    Log level [default: info]
       --print-config         Print default configuration
       --validate             Validate configuration and exit

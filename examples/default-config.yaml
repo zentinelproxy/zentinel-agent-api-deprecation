@@ -1,4 +1,4 @@
-# Sentinel API Deprecation Agent - Default Configuration
+# Zentinel API Deprecation Agent - Default Configuration
 #
 # This file shows all available options with their default values.
 
@@ -61,6 +61,6 @@ settings:
 # Metrics configuration
 metrics:
   enabled: true
-  prefix: sentinel_api_deprecation
+  prefix: zentinel_api_deprecation
   labels: {}
   port: 0  # Set > 0 to enable metrics endpoint

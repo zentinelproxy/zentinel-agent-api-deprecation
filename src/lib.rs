@@ -1,4 +1,4 @@
-//! Sentinel API Deprecation Agent
+//! Zentinel API Deprecation Agent
 //!
 //! Manages API lifecycle by adding deprecation and sunset headers, tracking
 //! usage of deprecated endpoints, and handling migration through redirects.

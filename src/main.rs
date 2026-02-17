@@ -1,9 +1,9 @@
-//! Sentinel API Deprecation Agent - CLI Entry Point
+//! Zentinel API Deprecation Agent - CLI Entry Point
 
 use anyhow::Result;
 use clap::Parser;
-use sentinel_agent_api_deprecation::{ApiDeprecationAgent, ApiDeprecationConfig};
-use sentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
+use zentinel_agent_api_deprecation::{ApiDeprecationAgent, ApiDeprecationConfig};
+use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing::{info, Level};
@@ -11,8 +11,8 @@ use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "sentinel-agent-api-deprecation",
-    about = "API deprecation management agent for Sentinel proxy",
+    name = "zentinel-agent-api-deprecation",
+    about = "API deprecation management agent for Zentinel proxy",
     version
 )]
 struct Args {
@@ -21,7 +21,7 @@ struct Args {
     config: PathBuf,
 
     /// Unix socket path for agent communication
-    #[arg(short, long, default_value = "/tmp/sentinel-api-deprecation.sock")]
+    #[arg(short, long, default_value = "/tmp/zentinel-api-deprecation.sock")]
     socket: PathBuf,
 
     /// gRPC server address (e.g., "0.0.0.0:50051")
@@ -139,7 +139,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn start_metrics_server(metrics: sentinel_agent_api_deprecation::metrics::DeprecationMetrics, port: u16) {
+async fn start_metrics_server(metrics: zentinel_agent_api_deprecation::metrics::DeprecationMetrics, port: u16) {
     use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
 

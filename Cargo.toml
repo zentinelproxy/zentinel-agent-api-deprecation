@@ -1,19 +1,19 @@
 [package]
-name = "sentinel-agent-api-deprecation"
+name = "zentinel-agent-api-deprecation"
 version = "0.2.0"
 edition = "2021"
 authors = ["Raskell <hello@raskell.io>"]
-description = "API deprecation management agent for Sentinel proxy - sunset headers, usage tracking, and migration support"
+description = "API deprecation management agent for Zentinel proxy - sunset headers, usage tracking, and migration support"
 license = "Apache-2.0"
-repository = "https://github.com/raskell-io/sentinel-agent-api-deprecation"
-keywords = ["sentinel", "proxy", "agent", "api", "deprecation"]
+repository = "https://github.com/zentinelproxy/zentinel-agent-api-deprecation"
+keywords = ["zentinel", "proxy", "agent", "api", "deprecation"]
 categories = ["network-programming", "web-programming"]
 readme = "README.md"
 
 [dependencies]
-# Sentinel SDK (v2 protocol support)
-sentinel-agent-sdk = { path = "../sentinel-agent-rust-sdk" }
-sentinel-agent-protocol = "0.3"
+# Zentinel SDK (v2 protocol support)
+zentinel-agent-sdk = { path = "../zentinel-agent-rust-sdk" }
+zentinel-agent-protocol = "0.3"
 
 # Async runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync", "time", "fs"] }
@@ -52,9 +52,9 @@ tokio-test = "0.4"
 tempfile = "3"
 
 [[bin]]
-name = "sentinel-agent-api-deprecation"
+name = "zentinel-agent-api-deprecation"
 path = "src/main.rs"
 
 [lib]
-name = "sentinel_agent_api_deprecation"
+name = "zentinel_agent_api_deprecation"
 path = "src/lib.rs"
