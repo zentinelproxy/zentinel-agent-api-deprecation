@@ -13,7 +13,7 @@ readme = "README.md"
 [dependencies]
 # Zentinel SDK (v2 protocol support)
 zentinel-agent-sdk = { path = "../zentinel-agent-rust-sdk" }
-zentinel-agent-protocol = "0.3"
+zentinel-agent-protocol = { version = "0.5", git = "https://github.com/zentinelproxy/zentinel.git", package = "zentinel-agent-protocol" }
 
 # Async runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync", "time", "fs"] }
