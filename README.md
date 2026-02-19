@@ -56,7 +56,7 @@ agents {
 3. Start the agent:
 
 ```bash
-zentinel-agent-api-deprecation -c api-deprecation.yaml
+zentinel-api-deprecation-agent -c api-deprecation.yaml
 ```
 
 ## Configuration
@@ -158,13 +158,13 @@ The agent exposes Prometheus metrics for monitoring:
 Enable metrics server:
 
 ```bash
-zentinel-agent-api-deprecation --metrics --metrics-port 9090
+zentinel-api-deprecation-agent --metrics --metrics-port 9090
 ```
 
 ## CLI Options
 
 ```
-zentinel-agent-api-deprecation [OPTIONS]
+zentinel-api-deprecation-agent [OPTIONS]
 
 Options:
   -c, --config <PATH>        Configuration file [default: api-deprecation.yaml]

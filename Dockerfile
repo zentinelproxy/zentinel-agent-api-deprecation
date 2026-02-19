@@ -10,7 +10,7 @@
 ################################################################################
 FROM gcr.io/distroless/cc-debian12:nonroot AS prebuilt
 
-COPY zentinel-agent-api-deprecation /zentinel-agent-api-deprecation
+COPY zentinel-api-deprecation-agent /zentinel-api-deprecation-agent
 
 LABEL org.opencontainers.image.title="Zentinel API Deprecation Agent" \
       org.opencontainers.image.description="Zentinel API Deprecation Agent for Zentinel reverse proxy" \
@@ -22,4 +22,4 @@ ENV RUST_LOG=info,zentinel_agent_api_deprecation=debug \
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/zentinel-agent-api-deprecation"]
+ENTRYPOINT ["/zentinel-api-deprecation-agent"]
