@@ -480,7 +480,7 @@ status_code: 301
             DeprecationAction::Redirect { status_code } => {
                 assert_eq!(status_code, 301);
             }
-            _ => panic!("Expected Redirect action"),
+            _ => assert!(false, "Expected Redirect action"),
         }
     }
 
