@@ -8,16 +8,16 @@ use crate::headers::{gone_response_body, DeprecationHeaders};
 use crate::metrics::DeprecationMetrics;
 use async_trait::async_trait;
 use chrono::Utc;
-use zentinel_agent_sdk::{Agent, Decision, Request, Response};
-use zentinel_agent_protocol::v2::{
-    AgentCapabilities, AgentFeatures, AgentHandlerV2, CounterMetric, DrainReason, GaugeMetric,
-    HealthStatus, MetricsReport, ShutdownReason,
-};
-use zentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent, ResponseHeadersEvent};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
+use zentinel_agent_protocol::v2::{
+    AgentCapabilities, AgentFeatures, AgentHandlerV2, DrainReason, GaugeMetric, HealthStatus,
+    MetricsReport, ShutdownReason,
+};
+use zentinel_agent_protocol::EventType;
+use zentinel_agent_sdk::{Agent, Decision, Request, Response};
 
 /// API Deprecation Agent
 ///
@@ -209,8 +209,12 @@ struct DeprecationDecision {
 #[derive(Debug, Clone)]
 enum DeprecationActionResult {
     Warn,
-    Redirect { status_code: u16 },
-    Block { status_code: u16 },
+    Redirect {
+        status_code: u16,
+    },
+    Block {
+        status_code: u16,
+    },
     Custom {
         status_code: u16,
         body: String,
@@ -253,9 +257,10 @@ impl Agent for ApiDeprecationAgent {
         match decision.action {
             DeprecationActionResult::Warn => {
                 // Allow but add deprecation headers
-                let mut d = Decision::allow()
-                    .with_tag("deprecated")
-                    .with_metadata("deprecated_endpoint", serde_json::json!(decision.endpoint_id));
+                let mut d = Decision::allow().with_tag("deprecated").with_metadata(
+                    "deprecated_endpoint",
+                    serde_json::json!(decision.endpoint_id),
+                );
 
                 d = self.apply_headers(d, decision.headers);
                 d
@@ -263,11 +268,8 @@ impl Agent for ApiDeprecationAgent {
 
             DeprecationActionResult::Redirect { status_code } => {
                 if let Some(redirect_url) = decision.redirect_url {
-                    self.metrics.record_redirect(
-                        &decision.endpoint_id,
-                        path,
-                        &redirect_url,
-                    );
+                    self.metrics
+                        .record_redirect(&decision.endpoint_id, path, &redirect_url);
 
                     // Use permanent redirect for 301, regular for others
                     // Note: SDK supports 301 and 302; for 308 we use block with Location header
@@ -285,7 +287,10 @@ impl Agent for ApiDeprecationAgent {
                     d = d
                         .with_tag("deprecated")
                         .with_tag("redirected")
-                        .with_metadata("deprecated_endpoint", serde_json::json!(decision.endpoint_id))
+                        .with_metadata(
+                            "deprecated_endpoint",
+                            serde_json::json!(decision.endpoint_id),
+                        )
                         .with_metadata("redirect_target", serde_json::json!(redirect_url));
 
                     // Add deprecation headers to the redirect response
@@ -346,7 +351,10 @@ impl Agent for ApiDeprecationAgent {
                     .with_block_header("Content-Type", "application/json")
                     .with_tag("deprecated")
                     .with_tag("blocked")
-                    .with_metadata("deprecated_endpoint", serde_json::json!(decision.endpoint_id));
+                    .with_metadata(
+                        "deprecated_endpoint",
+                        serde_json::json!(decision.endpoint_id),
+                    );
 
                 // Add deprecation headers
                 for (name, value) in decision.headers {
@@ -360,14 +368,15 @@ impl Agent for ApiDeprecationAgent {
                 status_code,
                 body,
                 content_type,
-            } => {
-                Decision::block(status_code)
-                    .with_body(body)
-                    .with_block_header("Content-Type", content_type)
-                    .with_tag("deprecated")
-                    .with_tag("custom_response")
-                    .with_metadata("deprecated_endpoint", serde_json::json!(decision.endpoint_id))
-            }
+            } => Decision::block(status_code)
+                .with_body(body)
+                .with_block_header("Content-Type", content_type)
+                .with_tag("deprecated")
+                .with_tag("custom_response")
+                .with_metadata(
+                    "deprecated_endpoint",
+                    serde_json::json!(decision.endpoint_id),
+                ),
         }
     }
 
@@ -407,11 +416,7 @@ impl AgentHandlerV2 for ApiDeprecationAgent {
 
     fn health_status(&self) -> HealthStatus {
         if self.draining.load(Ordering::Relaxed) {
-            HealthStatus::degraded(
-                "api-deprecation",
-                vec!["new_requests".to_string()],
-                1.0,
-            )
+            HealthStatus::degraded("api-deprecation", vec!["new_requests".to_string()], 1.0)
         } else {
             HealthStatus::healthy("api-deprecation")
         }
@@ -430,12 +435,13 @@ impl AgentHandlerV2 for ApiDeprecationAgent {
         for endpoint in &self.config.endpoints {
             if let Some(sunset) = &endpoint.sunset_at {
                 let days = (*sunset - Utc::now()).num_days();
-                let mut metric = GaugeMetric::new(
-                    "api_deprecation_days_until_sunset",
-                    days as f64,
-                );
-                metric.labels.insert("endpoint_id".to_string(), endpoint.id.clone());
-                metric.labels.insert("path".to_string(), endpoint.path.clone());
+                let mut metric = GaugeMetric::new("api_deprecation_days_until_sunset", days as f64);
+                metric
+                    .labels
+                    .insert("endpoint_id".to_string(), endpoint.id.clone());
+                metric
+                    .labels
+                    .insert("path".to_string(), endpoint.path.clone());
                 report.gauges.push(metric);
             }
         }
@@ -454,18 +460,13 @@ impl AgentHandlerV2 for ApiDeprecationAgent {
     async fn on_shutdown(&self, reason: ShutdownReason, grace_period_ms: u64) {
         info!(
             ?reason,
-            grace_period_ms,
-            "API deprecation agent shutting down"
+            grace_period_ms, "API deprecation agent shutting down"
         );
         self.draining.store(true, Ordering::Relaxed);
     }
 
     async fn on_drain(&self, duration_ms: u64, reason: DrainReason) {
-        info!(
-            ?reason,
-            duration_ms,
-            "API deprecation agent draining"
-        );
+        info!(?reason, duration_ms, "API deprecation agent draining");
         self.draining.store(true, Ordering::Relaxed);
     }
 
@@ -541,7 +542,10 @@ endpoints:
 
         let d = decision.unwrap();
         assert_eq!(d.endpoint_id, "removed-posts");
-        assert!(matches!(d.action, DeprecationActionResult::Block { status_code: 410 }));
+        assert!(matches!(
+            d.action,
+            DeprecationActionResult::Block { status_code: 410 }
+        ));
     }
 
     #[test]
@@ -554,7 +558,10 @@ endpoints:
 
         let d = decision.unwrap();
         assert_eq!(d.endpoint_id, "redirect-orders");
-        assert!(matches!(d.action, DeprecationActionResult::Redirect { status_code: 308 }));
+        assert!(matches!(
+            d.action,
+            DeprecationActionResult::Redirect { status_code: 308 }
+        ));
         assert_eq!(d.redirect_url, Some("/api/v2/orders?page=1".to_string()));
     }
 

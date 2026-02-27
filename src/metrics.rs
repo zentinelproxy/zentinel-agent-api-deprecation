@@ -105,13 +105,7 @@ impl DeprecationMetrics {
     }
 
     /// Record a request to a deprecated endpoint.
-    pub fn record_request(
-        &self,
-        endpoint_id: &str,
-        path: &str,
-        method: &str,
-        status: &str,
-    ) {
+    pub fn record_request(&self, endpoint_id: &str, path: &str, method: &str, status: &str) {
         self.requests_total
             .with_label_values(&[endpoint_id, path, method, status])
             .inc();

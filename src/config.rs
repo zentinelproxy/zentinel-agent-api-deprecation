@@ -129,9 +129,7 @@ impl DeprecatedEndpoint {
         }
 
         // Validate redirect has a target
-        if matches!(self.action, DeprecationAction::Redirect { .. })
-            && self.replacement.is_none()
-        {
+        if matches!(self.action, DeprecationAction::Redirect { .. }) && self.replacement.is_none() {
             anyhow::bail!(
                 "Redirect action requires replacement info for endpoint: {}",
                 self.id
@@ -146,7 +144,11 @@ impl DeprecatedEndpoint {
         // Check method first (quick check)
         if !self.methods.is_empty() {
             let method_upper = method.to_uppercase();
-            if !self.methods.iter().any(|m| m.to_uppercase() == method_upper) {
+            if !self
+                .methods
+                .iter()
+                .any(|m| m.to_uppercase() == method_upper)
+            {
                 return false;
             }
         }
@@ -190,7 +192,10 @@ impl DeprecatedEndpoint {
         let mut message = format!("This endpoint ({}) is deprecated", self.path);
 
         if let Some(sunset) = &self.sunset_at {
-            message.push_str(&format!(" and will be removed on {}", sunset.format("%Y-%m-%d")));
+            message.push_str(&format!(
+                " and will be removed on {}",
+                sunset.format("%Y-%m-%d")
+            ));
         }
 
         if let Some(replacement) = &self.replacement {

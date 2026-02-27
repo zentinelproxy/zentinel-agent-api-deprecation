@@ -42,10 +42,9 @@ impl DeprecationHeaders {
         // Add Sunset header (RFC 8594)
         // Format: Sunset: <HTTP-date>
         if let Some(sunset_at) = &endpoint.sunset_at {
-            builder.headers.insert(
-                settings.sunset_header.clone(),
-                format_http_date(sunset_at),
-            );
+            builder
+                .headers
+                .insert(settings.sunset_header.clone(), format_http_date(sunset_at));
         }
 
         // Add Link header for documentation

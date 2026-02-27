@@ -2,12 +2,12 @@
 
 use anyhow::Result;
 use clap::Parser;
-use zentinel_agent_api_deprecation::{ApiDeprecationAgent, ApiDeprecationConfig};
-use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
+use zentinel_agent_api_deprecation::{ApiDeprecationAgent, ApiDeprecationConfig};
+use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -115,23 +115,21 @@ async fn main() -> Result<()> {
                 socket = ?args.socket,
                 "Starting API deprecation agent with UDS transport (v2 protocol)"
             );
-            TransportConfig::Uds {
-                path: args.socket,
-            }
+            TransportConfig::Uds { path: args.socket }
         }
     };
 
     // Run the agent with v2 protocol
-    let mut runner = AgentRunnerV2::new(agent)
-        .with_name("api-deprecation");
+    let mut runner = AgentRunnerV2::new(agent).with_name("api-deprecation");
 
     // Apply transport configuration
     runner = match transport {
         TransportConfig::Grpc { address } => runner.with_grpc(address),
         TransportConfig::Uds { path } => runner.with_uds(path),
-        TransportConfig::Both { grpc_address, uds_path } => {
-            runner.with_both(grpc_address, uds_path)
-        }
+        TransportConfig::Both {
+            grpc_address,
+            uds_path,
+        } => runner.with_both(grpc_address, uds_path),
     };
 
     runner.run().await?;
@@ -139,7 +137,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn start_metrics_server(metrics: zentinel_agent_api_deprecation::metrics::DeprecationMetrics, port: u16) {
+async fn start_metrics_server(
+    metrics: zentinel_agent_api_deprecation::metrics::DeprecationMetrics,
+    port: u16,
+) {
     use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
 
