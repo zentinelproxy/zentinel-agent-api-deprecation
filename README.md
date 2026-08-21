@@ -23,17 +23,36 @@ zentinel bundle install api-deprecation
 zentinel bundle install
 ```
 
-The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://zentinelproxy.io/docs/deployment/bundle/) for details.
+The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://docs.zentinelproxy.io/deployment/bundle/) for details.
 
 ### Using Cargo
 
+Not supported. `zentinel-agent-api-deprecation` is not published on crates.io, and it depends on
+`zentinel-agent-protocol` through a path dependency, so neither
+`cargo install zentinel-agent-api-deprecation` nor `cargo install --git` works. Use a prebuilt
+binary or build from source (below).
+
+### Prebuilt Binaries
+
+Each [release](https://github.com/zentinelproxy/zentinel-agent-api-deprecation/releases) ships binaries
+for `linux-x86_64`, `linux-aarch64`, and `darwin-aarch64`:
+
 ```bash
-cargo install zentinel-agent-api-deprecation
+VERSION=0.4.0
+PLATFORM=linux-x86_64   # or linux-aarch64, darwin-aarch64
+curl -fsSL -o zentinel-api-deprecation-agent.tar.gz \
+  "https://github.com/zentinelproxy/zentinel-agent-api-deprecation/releases/download/v${VERSION}/zentinel-api-deprecation-agent-${VERSION}-${PLATFORM}.tar.gz"
+tar -xzf zentinel-api-deprecation-agent.tar.gz
+sudo install -m 0755 zentinel-api-deprecation-agent /usr/local/bin/
 ```
 
 ### From Source
 
+Building from source requires the [zentinel](https://github.com/zentinelproxy/zentinel) repository checked out
+**next to** this one, because `zentinel-agent-protocol` is a path dependency:
+
 ```bash
+git clone https://github.com/zentinelproxy/zentinel
 git clone https://github.com/zentinelproxy/zentinel-agent-api-deprecation
 cd zentinel-agent-api-deprecation
 cargo build --release
