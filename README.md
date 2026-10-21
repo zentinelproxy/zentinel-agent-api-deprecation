@@ -1,66 +1,44 @@
-# Zentinel API Deprecation Agent
+<p align="center">
+  <a href="https://zentinelproxy.io">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/zentinelproxy/design/main/marks/lockup/zentinel-lockup-dark.svg">
+      <img alt="Zentinel" src="https://raw.githubusercontent.com/zentinelproxy/design/main/marks/lockup/zentinel-lockup-light.svg" height="52">
+    </picture>
+  </a>
+</p>
 
-An API lifecycle management agent for [Zentinel](https://zentinelproxy.io) that helps you gracefully deprecate and sunset API endpoints.
+<h3 align="center">API deprecation agent</h3>
 
-## Features
+<p align="center">Marks, redirects or retires deprecated API endpoints, decided on the request headers before the request reaches the upstream.</p>
 
-- **RFC-Compliant Headers**: Adds standard `Deprecation` and `Sunset` (RFC 8594) headers
-- **Usage Tracking**: Prometheus metrics for monitoring deprecated endpoint usage
-- **Flexible Actions**: Warn, redirect, or block deprecated endpoints
-- **Automatic Redirects**: Redirect old endpoints to new versions with query preservation
-- **Migration Support**: Include documentation links in deprecation notices
-- **Glob Patterns**: Match multiple endpoints with glob-style patterns
+<p align="center">
+  <a href="https://github.com/zentinelproxy/zentinel-agent-api-deprecation/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/zentinelproxy/zentinel-agent-api-deprecation/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-9b4d8a?style=flat&amp;labelColor=1f161e">
+  <img alt="Agent protocol v2" src="https://img.shields.io/badge/agent%20protocol-v2-f68d31?style=flat&amp;labelColor=1f161e">
+</p>
 
-## Installation
+<p align="center">
+  <a href="https://registry.zentinelproxy.io/api-deprecation/">Registry</a> &middot;
+  <a href="https://docs.zentinelproxy.io">Docs</a> &middot;
+  <a href="https://github.com/zentinelproxy">All repositories</a>
+</p>
 
-### Using Bundle (Recommended)
+For teams retiring old API versions behind Zentinel. You list deprecated
+endpoints in a YAML file (path or glob, methods, status, sunset date,
+replacement); the agent matches each request against that list and either lets
+it through with deprecation headers, redirects it to the replacement, or
+answers it itself (`410 Gone` or a custom response). Requests that match no
+entry are allowed untouched. If the agent is unreachable, the filter's
+`failure-mode` decides: with `"open"` the request goes to the upstream as if
+nothing were deprecated.
+
+## Quick start
 
 ```bash
-# Install just this agent
 zentinel bundle install api-deprecation
-
-# Or install all bundled agents
-zentinel bundle install
 ```
 
-The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://docs.zentinelproxy.io/deployment/bundle/) for details.
-
-### Using Cargo
-
-Not supported. `zentinel-agent-api-deprecation` is not published on crates.io, and it depends on
-`zentinel-agent-protocol` through a path dependency, so neither
-`cargo install zentinel-agent-api-deprecation` nor `cargo install --git` works. Use a prebuilt
-binary or build from source (below).
-
-### Prebuilt Binaries
-
-Each [release](https://github.com/zentinelproxy/zentinel-agent-api-deprecation/releases) ships binaries
-for `linux-x86_64`, `linux-aarch64`, and `darwin-aarch64`:
-
-```bash
-VERSION=0.4.0
-PLATFORM=linux-x86_64   # or linux-aarch64, darwin-aarch64
-curl -fsSL -o zentinel-api-deprecation-agent.tar.gz \
-  "https://github.com/zentinelproxy/zentinel-agent-api-deprecation/releases/download/v${VERSION}/zentinel-api-deprecation-agent-${VERSION}-${PLATFORM}.tar.gz"
-tar -xzf zentinel-api-deprecation-agent.tar.gz
-sudo install -m 0755 zentinel-api-deprecation-agent /usr/local/bin/
-```
-
-### From Source
-
-Building from source requires the [zentinel](https://github.com/zentinelproxy/zentinel) repository checked out
-**next to** this one, because `zentinel-agent-protocol` is a path dependency:
-
-```bash
-git clone https://github.com/zentinelproxy/zentinel
-git clone https://github.com/zentinelproxy/zentinel-agent-api-deprecation
-cd zentinel-agent-api-deprecation
-cargo build --release
-```
-
-## Quick Start
-
-1. Create a configuration file `api-deprecation.yaml`:
+Write `api-deprecation.yaml`:
 
 ```yaml
 endpoints:
@@ -68,197 +46,215 @@ endpoints:
     path: /api/v1/users
     methods: [GET, POST]
     status: deprecated
-    sunset_at: "2025-06-01T00:00:00Z"
+    sunset_at: "2027-06-01T00:00:00Z"
     replacement:
       path: /api/v2/users
     documentation_url: https://docs.example.com/migration
-    action:
-      type: warn
-```
-
-2. Add to your Zentinel configuration:
-
-```kdl
-agents {
-    api-deprecation socket="/tmp/zentinel-api-deprecation.sock"
-}
-```
-
-3. Start the agent:
-
-```bash
-zentinel-api-deprecation-agent -c api-deprecation.yaml
-```
-
-## Configuration
-
-### Deprecated Endpoints
-
-Each deprecated endpoint supports:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Unique identifier for the endpoint |
-| `path` | string | Path pattern (supports globs like `/api/v1/*`) |
-| `methods` | list | HTTP methods to match (empty = all) |
-| `status` | enum | `deprecated`, `scheduled`, or `removed` |
-| `deprecated_at` | datetime | When the endpoint was deprecated |
-| `sunset_at` | datetime | When the endpoint will be removed |
-| `replacement` | object | Replacement endpoint info |
-| `documentation_url` | string | Link to migration guide |
-| `message` | string | Custom deprecation message |
-| `action` | object | What to do when accessed |
-| `track_usage` | bool | Track usage metrics (default: true) |
-
-### Actions
-
-**Warn** (default): Allow the request but add deprecation headers
-```yaml
-action:
-  type: warn
-```
-
-**Redirect**: Redirect to the replacement endpoint
-```yaml
-action:
-  type: redirect
-  status_code: 308  # Permanent redirect
-```
-
-**Block**: Return an error response
-```yaml
-action:
-  type: block
-  status_code: 410  # Gone
-```
-
-**Custom**: Return a custom response
-```yaml
-action:
-  type: custom
-  status_code: 403
-  body: '{"error": "This API version is no longer available"}'
-  content_type: application/json
-```
-
-### Replacement Info
-
-```yaml
-replacement:
-  path: /api/v2/users
-  preserve_query: true  # Preserve query string in redirects
-  method: POST         # Optional: if the method changed
-```
-
-### Global Settings
-
-```yaml
-settings:
-  deprecation_header: Deprecation      # Header name
-  sunset_header: Sunset                # Header name
-  link_header: Link                    # Header name for docs/replacement
-  notice_header: X-Deprecation-Notice  # Header for human-readable message
-  include_headers: true                # Add headers to responses
-  past_sunset_action: warn             # warn, block, or redirect
-  log_access: true                     # Log deprecated endpoint access
-```
-
-## Response Headers
-
-When an endpoint is deprecated, the following headers are added:
-
-```
-Deprecation: @1704067200
-Sunset: Sat, 01 Jun 2025 00:00:00 GMT
-Link: <https://docs.example.com/migration>; rel="deprecation", </api/v2/users>; rel="successor-version"
-X-Deprecation-Notice: This endpoint (/api/v1/users) is deprecated and will be removed on 2025-06-01. Please migrate to /api/v2/users.
-```
-
-## Metrics
-
-The agent exposes Prometheus metrics for monitoring:
-
-| Metric | Type | Description |
-|--------|------|-------------|
-| `zentinel_api_deprecation_requests_total` | counter | Total requests to deprecated endpoints |
-| `zentinel_api_deprecation_redirects_total` | counter | Total redirects performed |
-| `zentinel_api_deprecation_blocked_total` | counter | Total blocked requests |
-| `zentinel_api_deprecation_days_until_sunset` | gauge | Days until endpoint sunset |
-| `zentinel_api_deprecation_request_duration_seconds` | histogram | Request duration |
-
-Enable metrics server:
-
-```bash
-zentinel-api-deprecation-agent --metrics --metrics-port 9090
-```
-
-## CLI Options
-
-```
-zentinel-api-deprecation-agent [OPTIONS]
-
-Options:
-  -c, --config <PATH>        Configuration file [default: api-deprecation.yaml]
-  -s, --socket <PATH>        Unix socket path [default: /tmp/zentinel-api-deprecation.sock]
-  -L, --log-level <LEVEL>    Log level [default: info]
-      --print-config         Print default configuration
-      --validate             Validate configuration and exit
-      --metrics              Enable metrics server
-      --metrics-port <PORT>  Metrics server port [default: 9090]
-  -h, --help                 Print help
-  -V, --version              Print version
-```
-
-## Use Cases
-
-### Gradual API Migration
-
-Track usage of v1 endpoints while migrating clients to v2:
-
-```yaml
-endpoints:
-  - id: users-v1
-    path: /api/v1/users
-    status: deprecated
-    sunset_at: "2025-06-01T00:00:00Z"
-    replacement:
-      path: /api/v2/users
-    action:
-      type: warn
-```
-
-### Immediate Redirect
-
-Force clients to use the new endpoint:
-
-```yaml
-endpoints:
-  - id: old-auth
-    path: /auth/login
-    status: deprecated
-    replacement:
-      path: /api/v2/auth/login
-      preserve_query: true
-    action:
-      type: redirect
-      status_code: 308
-```
-
-### Removed Endpoint
-
-Return 410 Gone for completely removed endpoints:
-
-```yaml
-endpoints:
-  - id: legacy-api
-    path: /legacy/*
-    status: removed
-    documentation_url: https://docs.example.com/sunset-notice
     action:
       type: block
       status_code: 410
 ```
 
+Start the agent:
+
+```bash
+zentinel-api-deprecation-agent --config api-deprecation.yaml --socket /tmp/zentinel-api-deprecation.sock
+```
+
+Wire it into a route (this file passes `zentinel test -c`):
+
+```kdl
+system {
+    worker-threads 0
+}
+
+listeners {
+    listener "http" {
+        address "0.0.0.0:8080"
+        protocol "http"
+    }
+}
+
+upstreams {
+    upstream "backend" {
+        target "127.0.0.1:3000"
+    }
+}
+
+agents {
+    agent "api-deprecation" type="custom" {
+        unix-socket "/tmp/zentinel-api-deprecation.sock"
+        events "request_headers"
+        timeout-ms 100
+    }
+}
+
+filters {
+    filter "api-deprecation" {
+        type "agent"
+        agent "api-deprecation"
+        failure-mode "open"
+    }
+}
+
+routes {
+    route "api" {
+        matches { path-prefix "/" }
+        upstream "backend"
+        filters "api-deprecation"
+    }
+}
+```
+
+`failure-mode "open"` keeps the API available when the agent is down; use
+`"closed"` if serving a removed endpoint is worse than refusing traffic.
+
+## Install
+
+### Bundle (recommended)
+
+```bash
+zentinel bundle install api-deprecation
+```
+
+Downloads the release binary pinned in Zentinel's bundle lock and installs it as `zentinel-api-deprecation-agent`.
+
+### Release binaries
+
+Tarballs for `linux-x86_64`, `linux-aarch64` and `darwin-aarch64` are attached to each [release](https://github.com/zentinelproxy/zentinel-agent-api-deprecation/releases).
+
+### From source
+
+`cargo install --git` does not work for this crate: it depends on a sibling
+checkout of [`zentinel-agent-rust-sdk`](https://github.com/zentinelproxy/zentinel-agent-rust-sdk) by path.
+
+```bash
+git clone https://github.com/zentinelproxy/zentinel-agent-rust-sdk
+git clone https://github.com/zentinelproxy/zentinel-agent-api-deprecation
+cd zentinel-agent-api-deprecation
+cargo build --release   # target/release/zentinel-api-deprecation-agent
+```
+
+## Configuration
+
+The agent reads a YAML file and its command line. It also accepts
+configuration over the protocol (`on_configure`), but Zentinel 0.6.50 does not
+forward an `agent { config { ... } }` block, so set it here.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `-c`, `--config` | `api-deprecation.yaml` | YAML file to load. If it does not exist, the agent starts with no endpoints (allows everything). |
+| `-s`, `--socket` | `/tmp/zentinel-api-deprecation.sock` | Unix socket to listen on. |
+| `--grpc-address` | none | Also listen for gRPC on this address, e.g. `0.0.0.0:50051`. |
+| `-L`, `--log-level` | `info` | `trace`, `debug`, `info`, `warn` or `error`. |
+| `--print-config` | | Print the annotated example configuration and exit. |
+| `--validate` | | Parse and validate the file, then exit. |
+| `--metrics` | off | Serve Prometheus metrics over HTTP on `0.0.0.0:<metrics-port>`. |
+| `--metrics-port` | `9090` | Port for `--metrics`. |
+
+Unknown keys in the file are rejected, so a typo fails at startup rather than
+being ignored.
+
+### Endpoint entries (`endpoints[]`)
+
+The first entry that matches wins.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `id` | required | Name used in logs and metric labels. |
+| `path` | required | Without `*` or `?`: the exact path and everything under `path/`. With them: a glob, e.g. `/api/v1/*`. |
+| `methods` | `[]` (all) | Methods to match, case-insensitive. |
+| `status` | `deprecated` | `deprecated`, `scheduled` or `removed`. `removed` always answers `410 Gone`, whatever `action` says. |
+| `deprecated_at` | none | RFC 3339 time; sets `Deprecation: @<unix-seconds>` (otherwise `Deprecation: true`). |
+| `sunset_at` | none | RFC 3339 time; sets the `Sunset` header (RFC 8594). After it passes, `settings.past_sunset_action` replaces `action`. |
+| `replacement.path` | none | Successor path: `Link: <...>; rel="successor-version"` and the redirect target. Required by `action.type: redirect`. |
+| `replacement.preserve_query` | `true` | Append the request's query string to the redirect target. |
+| `documentation_url` | none | `Link: <...>; rel="deprecation"`, quoted in the notice header and returned as `documentation` in the error body. |
+| `message` | generated | Text of the notice header. |
+| `action.type` | `warn` | `warn`, `redirect`, `block` or `custom`, see below. |
+| `action.status_code` | `308` (redirect), `410` (block) | Status for `redirect`, `block` and `custom` (required for `custom`). |
+| `action.body`, `action.content_type` | none, `application/json` | Response for `custom` (`body` required). |
+| `headers` | `{}` | Extra headers added alongside the deprecation headers. |
+| `track_usage` | `true` | Count requests to this entry in the metrics. |
+
+`replacement.method` and `replacement.param_mappings` are parsed but not used.
+
+Actions:
+
+- `warn`: allow the request and ask for the deprecation headers on the
+  response. **Zentinel 0.6.50 drops response headers returned on a
+  request-headers decision, so in practice `warn` only logs and counts.**
+- `redirect`: answer with `status_code` and `Location: <replacement>`, plus the
+  deprecation headers. With `status_code` 301 or 302 the agent returns a
+  protocol redirect, which Zentinel 0.6.50 answers with a 500; use 307 or 308.
+- `block`: answer with `status_code`, the deprecation headers and a JSON body
+  (`"error": "endpoint_removed"`, a `message` naming the path, and `documentation` if set).
+- `custom`: answer with `status_code`, `body` and `content_type`, without
+  deprecation headers.
+
+### Global settings (`settings`)
+
+| Option | Default | Meaning |
+|---|---|---|
+| `deprecation_header` | `Deprecation` | Name of the deprecation header. |
+| `sunset_header` | `Sunset` | Name of the sunset header. |
+| `link_header` | `Link` | Name of the link header. |
+| `notice_header` | `X-Deprecation-Notice` | Name of the human-readable notice header. |
+| `past_sunset_action` | `warn` | For entries past `sunset_at`: `warn`, `block` (410) or `redirect` (301, falls back to 410 without a replacement; see the 301 caveat above). |
+| `log_access` | `true` | Log every matched request at `info`. |
+| `include_headers` | `true` | Parsed but not used: headers are always built. |
+
+### Metrics (`metrics`)
+
+| Option | Default | Meaning |
+|---|---|---|
+| `prefix` | `zentinel_api_deprecation` | Prefix for the Prometheus metric names. |
+| `enabled`, `port`, `labels` | `true`, `0`, `{}` | Parsed but not used; the metrics server is started by `--metrics`. |
+
+With `--metrics`, the agent serves `<prefix>_requests_total`,
+`<prefix>_redirects_total`, `<prefix>_blocked_total` (counters) and
+`<prefix>_days_until_sunset` (gauge). `<prefix>_request_duration_seconds` is
+registered but never observed. It also reports the endpoint count and days
+until sunset to Zentinel over the protocol.
+
+Full reference: <https://registry.zentinelproxy.io/api-deprecation/>
+
+## How it works
+
+The agent handles only the request-headers event. It matches the request path
+and method against `endpoints` in order, records the match, picks the action
+(`removed` status first, then the past-sunset policy, then the entry's
+`action`) and either allows the request or returns the response itself. Path
+globs use [`globset`](https://docs.rs/globset); without a glob character a path
+also matches everything below it (`/api/v1/users` matches `/api/v1/users/42`).
+
+## Development
+
+```bash
+git clone https://github.com/zentinelproxy/zentinel-agent-rust-sdk ../zentinel-agent-rust-sdk
+cargo build
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all --check
+```
+
+Minimum toolchain: stable Rust (CI uses `dtolnay/rust-toolchain@stable`) and
+`protoc` (CI installs `protobuf-compiler`).
+
+## Related
+
+- [Registry page](https://registry.zentinelproxy.io/api-deprecation/)
+- [Agent configuration](https://docs.zentinelproxy.io/configuration/agents/)
+- [Agent protocol v2](https://docs.zentinelproxy.io/agents/v2/)
+- [Zentinel](https://github.com/zentinelproxy/zentinel)
+- [RFC 8594: The Sunset HTTP header](https://www.rfc-editor.org/rfc/rfc8594)
+
 ## License
 
-Apache-2.0
+Apache-2.0 (declared in Cargo.toml; this repository has no LICENSE file yet).
+
+---
+
+<p align="center">
+  <sub>Part of <a href="https://zentinelproxy.io">Zentinel</a>, the security-first reverse proxy. The shisa guards the gate.</sub>
+</p>
