@@ -9,22 +9,29 @@ use tracing_subscriber::FmtSubscriber;
 use zentinel_agent_api_deprecation::{ApiDeprecationAgent, ApiDeprecationConfig};
 use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 
+const DEFAULT_CONFIG: &str = "api-deprecation.yaml";
+const DEFAULT_SOCKET: &str = "/tmp/zentinel-api-deprecation.sock";
+
 #[derive(Parser, Debug)]
 #[command(
-    name = "zentinel-agent-api-deprecation",
+    name = "zentinel-api-deprecation-agent",
     about = "API deprecation management agent for Zentinel proxy",
     version
 )]
 struct Args {
-    /// Path to configuration file
-    #[arg(short, long, default_value = "api-deprecation.yaml")]
-    config: PathBuf,
+    /// Path to configuration file. Without it, `api-deprecation.yaml` in
+    /// the working directory is used if it exists, otherwise the defaults
+    /// (no deprecated endpoints).
+    #[arg(short, long)]
+    config: Option<PathBuf>,
 
-    /// Unix socket path for agent communication
-    #[arg(short, long, default_value = "/tmp/zentinel-api-deprecation.sock")]
-    socket: PathBuf,
+    /// Unix socket path (UDS transport, agent protocol v2).
+    /// Default: /tmp/zentinel-api-deprecation.sock. With --grpc-address the
+    /// socket is served too only when given explicitly.
+    #[arg(short, long)]
+    socket: Option<PathBuf>,
 
-    /// gRPC server address (e.g., "0.0.0.0:50051")
+    /// gRPC listen address (e.g. "127.0.0.1:50051")
     #[arg(long, value_name = "ADDR")]
     grpc_address: Option<SocketAddr>,
 
@@ -68,11 +75,20 @@ async fn main() -> Result<()> {
     }
 
     // Load configuration
-    let config = if args.config.exists() {
-        info!(path = ?args.config, "Loading configuration");
-        ApiDeprecationConfig::from_file(&args.config)?
+    // An explicit --config must exist; the implicit api-deprecation.yaml
+    // is optional.
+    let config_path = args
+        .config
+        .clone()
+        .or_else(|| Some(PathBuf::from(DEFAULT_CONFIG)).filter(|p| p.exists()));
+    let config = if let Some(path) = config_path {
+        if !path.exists() {
+            anyhow::bail!("Configuration file not found: {}", path.display());
+        }
+        info!(path = ?path, "Loading configuration");
+        ApiDeprecationConfig::from_file(&path)?
     } else if args.validate {
-        anyhow::bail!("Configuration file not found: {:?}", args.config);
+        anyhow::bail!("Configuration file not found: {}", DEFAULT_CONFIG);
     } else {
         info!("Using default configuration");
         ApiDeprecationConfig::default()
@@ -98,24 +114,32 @@ async fn main() -> Result<()> {
     }
 
     // Determine transport configuration
-    let transport = match args.grpc_address {
-        Some(grpc_addr) => {
+    let transport = match (args.grpc_address, args.socket) {
+        (Some(grpc_addr), Some(socket)) => {
             info!(
                 grpc_address = %grpc_addr,
-                socket = ?args.socket,
+                socket = ?socket,
                 "Starting API deprecation agent with gRPC and UDS transport (v2 protocol)"
             );
             TransportConfig::Both {
                 grpc_address: grpc_addr,
-                uds_path: args.socket,
+                uds_path: socket,
             }
         }
-        None => {
+        (Some(grpc_addr), None) => {
             info!(
-                socket = ?args.socket,
+                grpc_address = %grpc_addr,
+                "Starting API deprecation agent with gRPC transport (v2 protocol)"
+            );
+            TransportConfig::Grpc { address: grpc_addr }
+        }
+        (None, socket) => {
+            let socket = socket.unwrap_or_else(|| PathBuf::from(DEFAULT_SOCKET));
+            info!(
+                socket = ?socket,
                 "Starting API deprecation agent with UDS transport (v2 protocol)"
             );
-            TransportConfig::Uds { path: args.socket }
+            TransportConfig::Uds { path: socket }
         }
     };
 
