@@ -143,14 +143,15 @@ forward an `agent { config { ... } }` block, so set it here.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `-c`, `--config` | `api-deprecation.yaml` | YAML file to load. If it does not exist, the agent starts with no endpoints (allows everything). |
-| `-s`, `--socket` | `/tmp/zentinel-api-deprecation.sock` | Unix socket to listen on. |
-| `--grpc-address` | none | Also listen for gRPC on this address, e.g. `0.0.0.0:50051`. |
+| `-c`, `--config` | `api-deprecation.yaml` if present | YAML file to load. Without the option, `api-deprecation.yaml` in the working directory is used if it exists, otherwise the agent starts with no endpoints (allows everything). A `--config` file that does not exist is an error. |
+| `-s`, `--socket` | `/tmp/zentinel-api-deprecation.sock` | Unix socket to listen on (agent protocol v2). |
+| `--grpc-address` | none | Listen for gRPC (agent protocol v2) on this address instead, e.g. `127.0.0.1:50051`. The Unix socket is served as well only if `--socket` is also given. |
 | `-L`, `--log-level` | `info` | `trace`, `debug`, `info`, `warn` or `error`. |
 | `--print-config` | | Print the annotated example configuration and exit. |
 | `--validate` | | Parse and validate the file, then exit. |
 | `--metrics` | off | Serve Prometheus metrics over HTTP on `0.0.0.0:<metrics-port>`. |
 | `--metrics-port` | `9090` | Port for `--metrics`. |
+| `--version` | | Print `zentinel-api-deprecation-agent <version>` and exit. |
 
 Unknown keys in the file are rejected, so a typo fails at startup rather than
 being ignored.
@@ -185,8 +186,9 @@ Actions:
   response. **Zentinel 0.6.50 drops response headers returned on a
   request-headers decision, so in practice `warn` only logs and counts.**
 - `redirect`: answer with `status_code` and `Location: <replacement>`, plus the
-  deprecation headers. With `status_code` 301 or 302 the agent returns a
-  protocol redirect, which Zentinel 0.6.50 answers with a 500; use 307 or 308.
+  deprecation headers. Any 3xx works (sent as a block response with a
+  `Location` header; until 0.5.0, 301 and 302 used the protocol's redirect
+  decision, which Zentinel 0.6.50 answers with a 500).
 - `block`: answer with `status_code`, the deprecation headers and a JSON body
   (`"error": "endpoint_removed"`, a `message` naming the path, and `documentation` if set).
 - `custom`: answer with `status_code`, `body` and `content_type`, without
@@ -200,7 +202,7 @@ Actions:
 | `sunset_header` | `Sunset` | Name of the sunset header. |
 | `link_header` | `Link` | Name of the link header. |
 | `notice_header` | `X-Deprecation-Notice` | Name of the human-readable notice header. |
-| `past_sunset_action` | `warn` | For entries past `sunset_at`: `warn`, `block` (410) or `redirect` (301, falls back to 410 without a replacement; see the 301 caveat above). |
+| `past_sunset_action` | `warn` | For entries past `sunset_at`: `warn`, `block` (410) or `redirect` (301, falls back to 410 without a replacement). |
 | `log_access` | `true` | Log every matched request at `info`. |
 | `include_headers` | `true` | Parsed but not used: headers are always built. |
 
@@ -227,6 +229,26 @@ and method against `endpoints` in order, records the match, picks the action
 `action`) and either allows the request or returns the response itself. Path
 globs use [`globset`](https://docs.rs/globset); without a glob character a path
 also matches everything below it (`/api/v1/users` matches `/api/v1/users/42`).
+Only the path is matched: a query string does not change the result (before
+0.5.0 it did, so `/removed?x=1` got past a `removed` entry).
+
+## Releases and smoke test
+
+Releases are built from their tag by the shared pipeline in
+[`zentinelproxy/.github`](https://github.com/zentinelproxy/.github)
+(`agent-release.yml`): each platform's binary is run behind a real Zentinel
+by [`scripts/smoke-test.sh`](scripts/smoke-test.sh) before anything is
+published, and CI runs the same smoke job on every push. The smoke test uses
+[`scripts/smoke/api-deprecation.yaml`](scripts/smoke/api-deprecation.yaml)
+over the Unix socket and over gRPC, fail-closed: a path that is not deprecated
+and a deprecated one with a future sunset are forwarded, a `removed` entry and
+one past its sunset get `410`, a redirect entry gets `301`, and with the agent
+stopped requests are refused. Locally:
+
+```bash
+AGENT_SMOKE=../.github/agent-smoke/smoke.py \
+  scripts/smoke-test.sh target/release/zentinel-api-deprecation-agent ./zentinel
+```
 
 ## Development
 

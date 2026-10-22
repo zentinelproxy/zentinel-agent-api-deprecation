@@ -1,0 +1,42 @@
+# Configuration for scripts/smoke-test.sh.
+endpoints:
+  # Removed: always 410 Gone.
+  - id: legacy-auth
+    path: /auth/legacy
+    status: removed
+    action:
+      type: block
+      status_code: 410
+
+  # Deprecated with a sunset in the past: settings.past_sunset_action
+  # (block) answers 410.
+  - id: orders-v1
+    path: /api/v1/orders
+    status: deprecated
+    sunset_at: "2020-01-01T00:00:00Z"
+    action:
+      type: warn
+
+  # Deprecated, sunset in the future, redirect to the replacement.
+  - id: products-v1
+    path: /api/v1/products
+    status: deprecated
+    sunset_at: "2099-01-01T00:00:00Z"
+    replacement:
+      path: /api/v2/products
+      preserve_query: true
+    action:
+      type: redirect
+      status_code: 301
+
+  # Deprecated, sunset in the future, warn only: forwarded with the
+  # Deprecation / Sunset headers on the response.
+  - id: users-v1
+    path: /api/v1/users
+    status: deprecated
+    sunset_at: "2099-01-01T00:00:00Z"
+    action:
+      type: warn
+
+settings:
+  past_sunset_action: block

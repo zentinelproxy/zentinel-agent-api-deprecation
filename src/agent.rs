@@ -230,7 +230,7 @@ unsafe impl Sync for ApiDeprecationAgent {}
 impl Agent for ApiDeprecationAgent {
     async fn on_request(&self, request: &Request) -> Decision {
         let method = request.method();
-        let path = request.path();
+        let path = request.path_only();
         let query_string = request.query_string();
 
         // Process the request
@@ -271,18 +271,13 @@ impl Agent for ApiDeprecationAgent {
                     self.metrics
                         .record_redirect(&decision.endpoint_id, path, &redirect_url);
 
-                    // Use permanent redirect for 301, regular for others
-                    // Note: SDK supports 301 and 302; for 308 we use block with Location header
-                    let mut d = if status_code == 301 {
-                        Decision::redirect_permanent(&redirect_url)
-                    } else if status_code == 302 {
-                        Decision::redirect(&redirect_url)
-                    } else {
-                        // For 308 or other codes, use block with Location header
-                        Decision::block(status_code)
-                            .with_block_header("Location", &redirect_url)
-                            .with_body("")
-                    };
+                    // Every redirect is a block response with a Location
+                    // header, whatever the status. The protocol's redirect
+                    // decision is answered with a 500 by Zentinel releases up
+                    // to 26.10_7, and this works on all of them.
+                    let mut d = Decision::block(status_code)
+                        .with_block_header("Location", &redirect_url)
+                        .with_body("");
 
                     d = d
                         .with_tag("deprecated")
@@ -614,5 +609,78 @@ endpoints:
         let output = agent.metrics().encode();
         assert!(output.contains("requests_total"));
         assert!(output.contains("legacy-users"));
+    }
+
+    fn request(method: &str, uri: &str) -> Request {
+        let event = zentinel_agent_protocol::RequestHeadersEvent {
+            metadata: zentinel_agent_protocol::RequestMetadata {
+                correlation_id: "t".to_string(),
+                request_id: "t".to_string(),
+                client_ip: "127.0.0.1".to_string(),
+                client_port: 1,
+                server_name: None,
+                protocol: "HTTP/1.1".to_string(),
+                tls_version: None,
+                tls_cipher: None,
+                route_id: None,
+                upstream_id: None,
+                timestamp: String::new(),
+                traceparent: None,
+            },
+            method: method.to_string(),
+            uri: uri.to_string(),
+            headers: HashMap::new(),
+        };
+        Request::from_headers_event(&event)
+    }
+
+    #[tokio::test]
+    async fn test_query_string_does_not_bypass_removed_endpoint() {
+        let agent = ApiDeprecationAgent::new(test_config());
+        for uri in ["/api/v1/posts", "/api/v1/posts?page=2", "/api/v1/posts?"] {
+            let response = agent.on_request(&request("GET", uri)).await.build();
+            assert!(
+                matches!(
+                    response.decision,
+                    zentinel_agent_protocol::Decision::Block { status: 410, .. }
+                ),
+                "{uri} must be 410, got {:?}",
+                response.decision
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_redirect_is_a_block_with_location_for_every_status() {
+        for status in [301u16, 302, 307, 308] {
+            let yaml = format!(
+                r#"
+endpoints:
+  - id: moved
+    path: /old
+    replacement:
+      path: /new
+    action:
+      type: redirect
+      status_code: {status}
+"#
+            );
+            let agent = ApiDeprecationAgent::new(serde_yaml::from_str(&yaml).unwrap());
+            let response = agent.on_request(&request("GET", "/old?x=1")).await.build();
+            match response.decision {
+                zentinel_agent_protocol::Decision::Block {
+                    status: got,
+                    headers: Some(headers),
+                    ..
+                } => {
+                    assert_eq!(got, status);
+                    assert_eq!(
+                        headers.get("Location").map(String::as_str),
+                        Some("/new?x=1")
+                    );
+                }
+                other => panic!("{status}: expected a block with Location, got {other:?}"),
+            }
+        }
     }
 }
