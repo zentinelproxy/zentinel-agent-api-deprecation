@@ -137,9 +137,10 @@ cargo build --release   # target/release/zentinel-api-deprecation-agent
 
 ## Configuration
 
-The agent reads a YAML file and its command line. It also accepts
-configuration over the protocol (`on_configure`), but Zentinel 0.6.50 does not
-forward an `agent { config { ... } }` block, so set it here.
+The agent reads a YAML file and its command line. Zentinel 26.10_8 and later
+send the agent block's `config { }` on every connection (releases up to 0.6.50
+never did), but the agent has no handler for it: it acknowledges the block
+and applies nothing, so set everything here.
 
 | Option | Default | Meaning |
 |---|---|---|
@@ -183,12 +184,14 @@ The first entry that matches wins.
 Actions:
 
 - `warn`: allow the request and ask for the deprecation headers on the
-  response. **Zentinel 0.6.50 drops response headers returned on a
-  request-headers decision, so in practice `warn` only logs and counts.**
+  response. **Zentinel 26.10_8 and later send them to the client; releases up
+  to 26.10_7 (0.6.50) dropped response headers returned on a request-headers
+  decision, so there `warn` only logs and counts.**
 - `redirect`: answer with `status_code` and `Location: <replacement>`, plus the
   deprecation headers. Any 3xx works (sent as a block response with a
   `Location` header; until 0.5.0, 301 and 302 used the protocol's redirect
-  decision, which Zentinel 0.6.50 answers with a 500).
+  decision, which Zentinel releases up to 26.10_7 answered with a 500 and
+  26.10_8 redirects with the agent's `Location`).
 - `block`: answer with `status_code`, the deprecation headers and a JSON body
   (`"error": "endpoint_removed"`, a `message` naming the path, and `documentation` if set).
 - `custom`: answer with `status_code`, `body` and `content_type`, without
